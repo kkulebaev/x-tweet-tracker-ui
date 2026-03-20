@@ -102,6 +102,3 @@ export async function apiDeleteAccount(id: string) {
   });
 }
 
-export async function apiRunWorker() {
-  return apiFetch<{ ok: true; result: RunResultDTO }>('/admin/run', { method: 'POST' });
-}

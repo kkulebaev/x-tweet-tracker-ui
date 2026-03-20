@@ -5,7 +5,6 @@ import {
   apiDeleteAccount,
   apiGetAccount,
   apiListAccounts,
-  apiRunWorker,
   apiToggleAccount,
   type AccountDTO,
 } from './api-client.js';
@@ -77,7 +76,7 @@ export function createTelegramBot() {
     if (accounts.length === 0) {
       return {
         text: header + '\nСписок пуст. Добавь аккаунт командой:\n<code>/add kkulebaev</code>',
-        keyboard: new InlineKeyboard().text('➕ Добавить', 'ui:add').row().text('▶️ Запустить сбор', 'ui:run'),
+        keyboard: new InlineKeyboard().text('➕ Добавить', 'ui:add'),
       };
     }
 
@@ -96,7 +95,7 @@ export function createTelegramBot() {
     });
     kb.row();
 
-    kb.text('🔄 Обновить', 'ui:list').text('▶️ Запустить сбор', 'ui:run').row();
+    kb.text('🔄 Обновить', 'ui:list').row();
     kb.text('➕ Добавить', 'ui:add');
 
     return {
@@ -172,7 +171,6 @@ export function createTelegramBot() {
         'Команды:\n' +
         '<code>/list</code> — список аккаунтов\n' +
         '<code>/add kkulebaev</code> — добавить аккаунт\n' +
-        '<code>/run</code> — запустить сбор вручную',
       { ...HTML_NO_PREVIEW },
     );
   });
@@ -202,23 +200,6 @@ export function createTelegramBot() {
     await addAccountByUsername(ctx, one);
   });
 
-  bot.command('run', async (ctx) => {
-    mustAdmin(ctx.from?.id);
-    await ctx.reply('⏳ Запускаю сбор…');
-    const r = await apiRunWorker();
-    const rr = r.result;
-
-    const errLines = rr.errors.slice(0, 5).map((e) => `- @${e.xUsername}: ${e.error}`).join('\n');
-    const errBlock = rr.errors.length ? `\n\nОшибки (первые 5):\n${errLines}` : '';
-
-    await ctx.reply(
-      `✅ Готово\n` +
-        `Аккаунтов: ${rr.accountsProcessed}/${rr.accountsTotal}\n` +
-        `Сохранено твитов: ${rr.tweetsInserted}\n` +
-        `Ошибок: ${rr.errors.length}` +
-        errBlock,
-    );
-  });
 
   // If user pressed "Добавить" and then sent a message with usernames
   bot.on('message:text', async (ctx) => {
@@ -251,20 +232,6 @@ export function createTelegramBot() {
       if (ctx.callbackQuery.message) {
         try {
           await ctx.editMessageText(text, { ...HTML_NO_PREVIEW, reply_markup: keyboard });
-        } catch (e) {
-          if (!isMessageNotModifiedError(e)) throw e;
-        }
-      }
-      return;
-    }
-
-    if (data === 'ui:run') {
-      const r = await apiRunWorker();
-      const rr = r.result;
-      const msg = `✅ Готово: аккаунтов ${rr.accountsProcessed}/${rr.accountsTotal}, твитов ${rr.tweetsInserted}, ошибок ${rr.errors.length}`;
-      if (ctx.callbackQuery.message) {
-        try {
-          await ctx.editMessageText(msg);
         } catch (e) {
           if (!isMessageNotModifiedError(e)) throw e;
         }
