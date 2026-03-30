@@ -1,4 +1,5 @@
 import { getApiBaseUrl, getApiToken } from './env';
+import { isSameOriginUrl } from './urls';
 
 export type AccountDTO = {
   id: string;
@@ -20,13 +21,23 @@ type AddAccountResponse = {
 };
 
 function joinUrl(base: string, path: string): string {
-  if (path.startsWith('/')) return `${base}${path}`;
-  return `${base}/${path}`;
+  const b = base.replace(/\/$/g, '');
+  if (path.startsWith('/')) return `${b}${path}`;
+  return `${b}/${path}`;
 }
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const url = joinUrl(getApiBaseUrl(), path);
   const token = getApiToken();
+
+  // If API_BASE_URL accidentally points to this UI origin, we'd fetch index.html.
+  // Give a clear error early.
+  if (isSameOriginUrl(url)) {
+    throw new Error(
+      `API_BASE_URL points to the UI origin (${window.location.origin}). ` +
+        `Set VITE_API_BASE_URL to the API service URL (not the UI URL).`,
+    );
+  }
 
   const res = await fetch(url, {
     ...init,
