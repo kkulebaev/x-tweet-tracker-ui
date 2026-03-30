@@ -1,6 +1,10 @@
 import { getApiBaseUrl, getApiToken } from './env';
 import { isSameOriginUrl } from './urls';
 
+function isRelativeUrl(s: string): boolean {
+  return s.startsWith('/');
+}
+
 export type AccountDTO = {
   id: string;
   xUsername: string;
@@ -27,15 +31,16 @@ function joinUrl(base: string, path: string): string {
 }
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const url = joinUrl(getApiBaseUrl(), path);
+  const base = getApiBaseUrl();
+  const url = joinUrl(base, path);
   const token = getApiToken();
 
-  // If API_BASE_URL accidentally points to this UI origin, we'd fetch index.html.
-  // Give a clear error early.
-  if (isSameOriginUrl(url)) {
+  // If API_BASE_URL points to the UI origin (and it's not a relative URL), we'd fetch index.html.
+  // Relative base URLs are allowed intentionally (same-origin proxy setup).
+  if (!isRelativeUrl(base) && isSameOriginUrl(url)) {
     throw new Error(
       `API_BASE_URL points to the UI origin (${window.location.origin}). ` +
-        `Set VITE_API_BASE_URL to the API service URL (not the UI URL).`,
+        `Set VITE_API_BASE_URL to the API service URL (or use a relative URL like "/api" for a proxy).`,
     );
   }
 
