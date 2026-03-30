@@ -37,9 +37,17 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
     },
   });
 
+  const contentType = res.headers.get('content-type') ?? '';
+  const isJson = contentType.toLowerCase().includes('application/json');
+
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(`API ${res.status} ${res.statusText}: ${text}`);
+  }
+
+  if (!isJson) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`API returned non-JSON response: ${text.slice(0, 200)}`);
   }
 
   return (await res.json()) as T;
